@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recipe Generator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #FAF7F2; --bark: #3D2B1F; --herb: #4A7C59; --herb-light: #E8F2EC;
+    --saffron: #E8A020; --slate: #5C6B7A; --border: #E2D9CE;
+    --white: #FFFFFF; --red: #C0392B; --red-light: #FDECEA;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--cream); color: var(--bark); min-height: 100vh; }
+  header { background: var(--bark); color: var(--cream); padding: 24px 28px 20px; border-bottom: 3px solid var(--saffron); }
+  header h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 1.8rem; letter-spacing: -0.5px; }
+  header p { margin-top: 5px; font-size: 0.82rem; color: #B8A898; }
+  .main { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 88px); }
+  .sidebar { background: var(--white); border-right: 1px solid var(--border); padding: 20px 18px; display: flex; flex-direction: column; gap: 16px; }
+  .field-label { display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--slate); margin-bottom: 6px; }
+  .input-row { display: flex; gap: 7px; }
+  .input-row input { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 0.88rem; font-family: inherit; color: var(--bark); background: var(--cream); outline: none; transition: border-color 0.15s; }
+  .input-row input:focus { border-color: var(--herb); }
+  .input-row input::placeholder { color: #B8A898; }
+  .btn-add { background: var(--herb); color: white; border: none; border-radius: 8px; padding: 9px 14px; font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: inherit; }
+  .btn-add:hover { background: #3D6B4A; }
+  .categories-section { flex: 1; overflow-y: auto; }
+  .categories-section h3 { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--slate); margin-bottom: 10px; }
+  .category-group { margin-bottom: 10px; }
+  .category-header { font-size: 0.74rem; font-weight: 600; color: var(--herb); text-transform: uppercase; letter-spacing: 0.05em; padding: 3px 0; border-bottom: 1px solid var(--herb-light); margin-bottom: 6px; }
+  .ingredient-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; background: var(--herb-light); border: 1px solid #C3DECA; border-radius: 20px; padding: 3px 9px; font-size: 0.78rem; color: var(--bark); font-weight: 500; }
+  .tag-remove { background: none; border: none; cursor: pointer; color: var(--slate); font-size: 0.9rem; line-height: 1; padding: 0; font-family: inherit; }
+  .tag-remove:hover { color: var(--red); }
+  .empty-state { text-align: center; color: #B8A898; font-size: 0.82rem; padding: 16px 0; font-style: italic; }
+  .btn-generate { background: var(--saffron); color: var(--bark); border: none; border-radius: 10px; padding: 12px; font-size: 0.92rem; font-weight: 700; font-family: inherit; cursor: pointer; width: 100%; transition: background 0.15s; }
+  .btn-generate:hover:not(:disabled) { background: #D4900E; }
+  .btn-generate:disabled { background: #D0C8BE; color: #8A7D72; cursor: not-allowed; }
+  .content-area { padding: 28px; overflow-y: auto; }
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px; text-align: center; color: #B8A898; }
+  .welcome-icon { font-size: 3rem; margin-bottom: 14px; opacity: 0.5; }
+  .welcome h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #C4B8A8; margin-bottom: 7px; }
+  .welcome p { font-size: 0.85rem; max-width: 280px; line-height: 1.6; }
+  .recipe-card { background: var(--white); border-radius: 14px; border: 1px solid var(--border); overflow: hidden; max-width: 660px; }
+  .recipe-header { background: var(--bark); color: var(--cream); padding: 24px 28px; }
+  .recipe-meta { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .meta-pill { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 2px 10px; font-size: 0.75rem; font-weight: 600; color: #D4C9BC; }
+  .meta-pill.time { color: var(--saffron); background: rgba(232,160,32,0.15); }
+  .recipe-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; line-height: 1.2; margin-bottom: 7px; }
+  .recipe-desc { font-size: 0.85rem; color: #B8A898; line-height: 1.6; }
+  .recipe-body { padding: 24px 28px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 28px; }
+  .section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--herb); margin-bottom: 12px; }
+  .ingredients-list { list-style: none; }
+  .ingredients-list li { padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; display: flex; align-items: baseline; gap: 8px; line-height: 1.4; }
+  .ingredients-list li:last-child { border-bottom: none; }
+  .ing-bullet { width: 5px; height: 5px; border-radius: 50%; background: var(--herb); flex-shrink: 0; margin-top: 5px; }
+  .steps-list { list-style: none; }
+  .steps-list li { display: flex; gap: 12px; margin-bottom: 16px; font-size: 0.85rem; line-height: 1.65; }
+  .step-num { font-family: 'Playfair Display', serif; font-size: 1.05rem; font-weight: 700; color: var(--saffron); min-width: 20px; line-height: 1.4; }
+  .recipe-footer { background: var(--herb-light); border-top: 1px solid #C3DECA; padding: 12px 28px; font-size: 0.78rem; color: var(--herb); font-weight: 500; }
+  .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px; gap: 14px; color: var(--slate); }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--herb); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { background: var(--red-light); border: 1px solid #EABBB7; border-radius: 10px; padding: 14px 18px; color: var(--red); font-size: 0.85rem; margin-bottom: 16px; line-height: 1.5; }
+  @media (max-width: 700px) {
+    .main { grid-template-columns: 1fr; }
+    .sidebar { border-right: none; border-bottom: 1px solid var(--border); }
+    .recipe-body { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍳 Recipe Generator</h1>
+  <p>Add your ingredients — get a recipe ready in under an hour</p>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="input-area">
+      <label class="field-label">Add an ingredient</label>
+      <div class="input-row">
+        <input type="text" id="ingredientInput" placeholder="e.g. chicken, garlic…" autocomplete="off" />
+        <button class="btn-add" onclick="addIngredient()">Add</button>
+      </div>
+    </div>
+
+    <div class="categories-section">
+      <h3>Your ingredients</h3>
+      <div id="categoryDisplay"><p class="empty-state">No ingredients yet — add some above</p></div>
+    </div>
+
+    <button class="btn-generate" id="generateBtn" onclick="generateRecipe()" disabled>
+      Generate Recipe →
+    </button>
+  </div>
+
+  <div class="content-area" id="contentArea">
+    <div class="welcome">
+      <div class="welcome-icon">🥘</div>
+      <h2>What's in your kitchen?</h2>
+      <p>Add at least 2 ingredients on the left, then click Generate Recipe.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_KEY = "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";
+
+  const FDA_CATEGORIES = {
+    "Proteins": ["chicken","beef","pork","lamb","turkey","fish","salmon","tuna","shrimp","tofu","eggs","egg","tempeh","bacon","ham","sausage","cod","tilapia","crab","lobster","scallops","clams","mussels","sardines","anchovies","duck","venison","bison"],
+    "Vegetables": ["onion","garlic","tomato","tomatoes","carrot","carrots","broccoli","spinach","kale","lettuce","pepper","peppers","zucchini","potato","potatoes","mushroom","mushrooms","celery","cucumber","eggplant","cabbage","cauliflower","corn","peas","beans","lentils","chickpeas","artichoke","asparagus","leek","scallion","scallions","shallot","shallots","bok choy","beet","beets","radish","turnip","parsnip","sweet potato","squash","pumpkin","arugula","fennel","jalapeño","jalapeno","green beans","green onion"],
+    "Fruits": ["lemon","lime","orange","apple","banana","strawberry","blueberry","raspberry","avocado","mango","pineapple","grapes","cherry","cherries","peach","pear","plum","grape","grapefruit","pomegranate","fig","date","coconut","cranberry","blackberry","apricot","melon","watermelon","kiwi"],
+    "Grains & Starches": ["rice","pasta","bread","flour","oats","quinoa","couscous","noodles","tortilla","panko","breadcrumbs","cornmeal","polenta","farro","barley","bulgur","orzo","ramen","udon","soba","pita","baguette"],
+    "Dairy": ["milk","cream","butter","cheese","parmesan","mozzarella","cheddar","feta","ricotta","yogurt","sour cream","heavy cream","cream cheese","brie","gouda","goat cheese","gruyere","mascarpone","ghee"],
+    "Flavors & Spices": ["salt","pepper","cumin","paprika","oregano","thyme","rosemary","basil","bay leaf","cayenne","chili flakes","turmeric","curry","cinnamon","nutmeg","coriander","cardamom","cloves","allspice","star anise","ginger","saffron","sage","tarragon","dill","mint","parsley","cilantro","chives","marjoram","sumac"],
+    "Oils & Fats": ["olive oil","vegetable oil","canola oil","sesame oil","coconut oil","avocado oil","lard"],
+    "Sweeteners": ["sugar","honey","maple syrup","brown sugar","powdered sugar","agave","molasses"],
+    "Condiments & Sauces": ["soy sauce","hot sauce","worcestershire","fish sauce","oyster sauce","hoisin","teriyaki","mustard","ketchup","mayo","mayonnaise","tahini","sriracha","miso","tomato paste","tomato sauce","marinara","pesto","salsa","vinegar","balsamic","dijon"],
+    "Stocks & Liquids": ["chicken broth","beef broth","vegetable broth","chicken stock","beef stock","wine","white wine","red wine","beer","coconut milk","almond milk","orange juice","lemon juice","lime juice"],
+    "Nuts & Seeds": ["almonds","walnuts","pecans","cashews","peanuts","pine nuts","sesame seeds","chia seeds","sunflower seeds","pumpkin seeds","pistachios","hazelnuts"],
+    "Leavening Agents": ["baking soda","baking powder","yeast","cream of tartar"],
+    "Other": []
+  };
+
+  let ingredients = [];
+
+  function categorizeIngredient(name) {
+    const lower = name.toLowerCase().trim();
+    for (const [cat, list] of Object.entries(FDA_CATEGORIES)) {
+      if (cat === "Other") continue;
+      if (list.some(item => lower.includes(item) || item.includes(lower))) return cat;
+    }
+    return "Other";
+  }
+
+  function addIngredient() {
+    const input = document.getElementById('ingredientInput');
+    const val = input.value.trim();
+    if (!val) return;
+    if (ingredients.find(i => i.name.toLowerCase() === val.toLowerCase())) { input.value = ''; return; }
+    ingredients.push({ name: val, category: categorizeIngredient(val) });
+    input.value = '';
+    renderCategories();
+    document.getElementById('generateBtn').disabled = ingredients.length < 2;
+  }
+
+  document.getElementById('ingredientInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addIngredient();
+  });
+
+  function removeIngredient(name) {
+    ingredients = ingredients.filter(i => i.name !== name);
+    renderCategories();
+    document.getElementById('generateBtn').disabled = ingredients.length < 2;
+  }
+
+  function renderCategories() {
+    const container = document.getElementById('categoryDisplay');
+    if (ingredients.length === 0) {
+      container.innerHTML = '<p class="empty-state">No ingredients yet — add some above</p>';
+      return;
+    }
+    const grouped = {};
+    ingredients.forEach(i => {
+      if (!grouped[i.category]) grouped[i.category] = [];
+      grouped[i.category].push(i.name);
+    });
+    let html = '';
+    for (const [cat, items] of Object.entries(grouped)) {
+      html += `<div class="category-group">
+        <div class="category-header">${cat}</div>
+        <div class="ingredient-tags">
+          ${items.map(name => `<span class="tag">${name}<button class="tag-remove" onclick="removeIngredient('${name.replace(/'/g,"\\'")}')">×</button></span>`).join('')}
+        </div>
+      </div>`;
+    }
+    container.innerHTML = html;
+  }
+
+  async function generateRecipe() {
+    if (ingredients.length < 2) return;
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Generating…';
+    document.getElementById('contentArea').innerHTML = `<div class="loading"><div class="spinner"></div><p>Crafting your recipe…</p></div>`;
+
+    const ingredientList = ingredients.map(i => i.name).join(', ');
+    const categorized = {};
+    ingredients.forEach(i => {
+      if (!categorized[i.category]) categorized[i.category] = [];
+      categorized[i.category].push(i.name);
+    });
+    const categorizedStr = Object.entries(categorized).map(([k,v]) => `${k}: ${v.join(', ')}`).join('\n');
+
+    const prompt = `You are a creative home chef. A user has these ingredients: ${ingredientList}
+
+Categorized by FDA food ingredient type:
+${categorizedStr}
+
+Create ONE recipe that uses some or all of these ingredients and can be completed in under 60 minutes total.
+Respond ONLY with valid JSON, no markdown, no explanation:
+{"title":"Recipe name","description":"One or two sentence appetizing description","prepTime":"X min","cookTime":"X min","totalTime":"X min","servings":"X servings","ingredients":["amount + ingredient"],"steps":["Full step instruction"],"tip":"One helpful tip"}`;
+
+    try {
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 1000,
+          temperature: 0.7
+        })
+      });
+
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error?.message || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data.choices[0].message.content;
+      const clean = text.replace(/```json|```/g, '').trim();
+      const recipe = JSON.parse(clean);
+      renderRecipe(recipe);
+    } catch (err) {
+      document.getElementById('contentArea').innerHTML = `
+        <div class="error-box"><strong>Something went wrong:</strong> ${err.message}<br><br>Please try again.</div>
+        <div class="welcome"><div class="welcome-icon">🥘</div><p>Try adjusting your ingredients and generating again.</p></div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Generate Recipe →';
+      document.getElementById('generateBtn').disabled = ingredients.length < 2;
+    }
+  }
+
+  function renderRecipe(r) {
+    document.getElementById('contentArea').innerHTML = `
+      <div class="recipe-card">
+        <div class="recipe-header">
+          <div class="recipe-meta">
+            <span class="meta-pill time">⏱ ${r.totalTime}</span>
+            <span class="meta-pill">${r.servings}</span>
+            <span class="meta-pill">Prep ${r.prepTime} · Cook ${r.cookTime}</span>
+          </div>
+          <div class="recipe-title">${r.title}</div>
+          <div class="recipe-desc">${r.description}</div>
+        </div>
+        <div class="recipe-body">
+          <div>
+            <div class="section-label">Ingredients</div>
+            <ul class="ingredients-list">${r.ingredients.map(i => `<li><span class="ing-bullet"></span>${i}</li>`).join('')}</ul>
+          </div>
+          <div>
+            <div class="section-label">Instructions</div>
+            <ol class="steps-list">${r.steps.map((s,idx) => `<li><span class="step-num">${idx+1}</span><span>${s}</span></li>`).join('')}</ol>
+          </div>
+        </div>
+        ${r.tip ? `<div class="recipe-footer">💡 <strong>Tip:</strong> ${r.tip}</div>` : ''}
+      </div>`;
+  }
+</script>
+</body>
+</html>
